@@ -1,0 +1,5 @@
+.pio/build/
+.pio/libdeps/
+.pio/package/
+.DS_Store
+.claude/
