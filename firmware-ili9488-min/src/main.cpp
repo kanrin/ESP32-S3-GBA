@@ -27,6 +27,8 @@ bool g_rom_loaded = false;
 bool g_use_i2s_audio = false;
 bool g_use_vba = false;  // true if using VBA for GBA ROMs
 uint32_t g_last_ui_update_ms = 0;
+bool g_background_loaded = false;
+std::vector<String> g_rom_list;  // Cached ROM list
 
 bool hasGbaExtension(const String& path) {
   String lower = path;
@@ -35,15 +37,26 @@ bool hasGbaExtension(const String& path) {
 }
 
 void drawStatus(const String& text) {
-  g_display.fillScreen(TFT_WHITE);
-  g_display.drawText(12, 12, "ESP32-S3 GBC MVP", TFT_WHITE, TFT_RED);
-  g_display.drawText(12, 44, text, TFT_YELLOW, TFT_BLACK);
-  g_display.drawText(12, 76, "A:load/run B:audio mode", TFT_CYAN, TFT_BLACK);
-  g_display.drawText(12, 104, g_use_i2s_audio ? "Audio: I2S PCM5102" : "Audio: PWM quick path", TFT_YELLOW,
-                     TFT_BLACK);
+  // Load background image (once): try SD card first, fall back to embedded default
+  if (!g_background_loaded) {
+    if (g_display.pushRawImage("/roms/bg.raw")) {
+      Serial.println("[App] Using SD card background: /roms/bg.raw");
+    } else {
+      Serial.println("[App] SD background not found, using embedded default (Pokemon.jpg)");
+      g_display.pushDefaultBackground();
+    }
+    g_background_loaded = true;
+  }
+
+  // Draw menu overlay on top of background image
+  g_display.drawMenuOverlay(g_rom_list, g_menu.selectedIndex());
 }
 
+
+
 }  // namespace
+
+
 
 void setup() {
   Serial.begin(115200);
@@ -61,14 +74,17 @@ void setup() {
     LOG_E("SD init failed, check TF wiring.");
     drawStatus("SD init failed, check TF wiring.");
   } else {
-    auto roms = g_storage.listRomFiles("/roms");
-    g_menu.setEntries(roms);
+    g_rom_list = g_storage.listRomFiles("/roms");
+    g_menu.setEntries(g_rom_list);
     LOG_I("ROM list:\r\n%s", g_menu.renderText().c_str());
     drawStatus(g_menu.renderText());
   }
 
+
   g_gbc.begin(&g_display, &g_audio_pwm);
-  g_vba.begin(&g_display, &g_audio_pwm);
+  if (!g_vba.begin(&g_display, &g_audio_pwm)) {
+    LOG_W("VBA init failed (no PSRAM?) - GBA ROMs will not be playable");
+  }
   LOG_I("init ok");
 }
 
