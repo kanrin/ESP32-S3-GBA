@@ -40,6 +40,9 @@ class VbaAdapter {
   void onFrameReady();
 
  private:
+  bool allocateBuffers();
+  void freeBuffers();
+
   drivers::DisplayILI9488* display_ = nullptr;
   drivers::AudioPwm* audio_ = nullptr;
   bool loaded_ = false;
@@ -47,17 +50,15 @@ class VbaAdapter {
   uint32_t frame_count_ = 0;
   bool initialized_ = false;
 
-  // VBA state buffers (static allocation for embedded)
-  // Note: internalRAM, oam, ioMem, paletteRAM are static arrays in gba.cpp
-  uint16_t pix_buffer_[256 * 160];  // VBA pix buffer (256 wide, 160 tall)
+  // VBA state buffers (heap-allocated to avoid DRAM overflow)
+  uint16_t* pix_buffer_ = nullptr;       // 256 * 160 * 2 = 81,920 bytes
+  uint8_t* vram_buffer_ = nullptr;       // 0x20000 = 131,072 bytes
+  uint8_t* workRAM_buffer_ = nullptr;    // 0x40000 = 262,144 bytes
+  uint8_t* bios_buffer_ = nullptr;       // 0x4000 = 16,384 bytes
+  uint8_t* save_buffer_ = nullptr;       // 0x22000 = 139,264 bytes
   // ROM buffer is dynamically allocated based on actual ROM size
   uint8_t* rom_buffer_ = nullptr;
   uint32_t rom_buffer_size_ = 0;
-  uint8_t vram_buffer_[0x20000];
-  uint8_t workRAM_buffer_[0x40000];
-  uint8_t bios_buffer_[0x4000];
-  uint8_t save_buffer_[0x22000];  // flash + eeprom
-
 };
 
 }  // namespace emulator

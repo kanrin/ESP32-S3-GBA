@@ -65,6 +65,37 @@ VbaAdapter::~VbaAdapter() {
     initialized_ = false;
   }
   g_adapter_instance = nullptr;
+  freeBuffers();
+}
+
+bool VbaAdapter::allocateBuffers() {
+  // Allocate all VBA buffers on the heap to avoid DRAM BSS overflow
+  pix_buffer_ = (uint16_t*)calloc(256 * 160, sizeof(uint16_t));
+  vram_buffer_ = (uint8_t*)calloc(0x20000, 1);
+  workRAM_buffer_ = (uint8_t*)calloc(0x40000, 1);
+  bios_buffer_ = (uint8_t*)calloc(0x4000, 1);
+  save_buffer_ = (uint8_t*)calloc(0x22000, 1);
+
+  if (!pix_buffer_ || !vram_buffer_ || !workRAM_buffer_ || !bios_buffer_ || !save_buffer_) {
+    Serial.println("VBA: Failed to allocate buffers");
+    freeBuffers();
+    return false;
+  }
+
+  return true;
+}
+
+void VbaAdapter::freeBuffers() {
+  free(pix_buffer_);
+  pix_buffer_ = nullptr;
+  free(vram_buffer_);
+  vram_buffer_ = nullptr;
+  free(workRAM_buffer_);
+  workRAM_buffer_ = nullptr;
+  free(bios_buffer_);
+  bios_buffer_ = nullptr;
+  free(save_buffer_);
+  save_buffer_ = nullptr;
   if (rom_buffer_ != nullptr) {
     free(rom_buffer_);
     rom_buffer_ = nullptr;
@@ -80,9 +111,12 @@ bool VbaAdapter::begin(drivers::DisplayILI9488* display, drivers::AudioPwm* audi
     return false;
   }
 
-  // Point VBA globals to our pre-allocated buffers
-  // Note: internalRAM, oam, ioMem, paletteRAM are static arrays in gba.cpp
-  // and don't need to be set here.
+  // Allocate VBA buffers on the heap
+  if (!allocateBuffers()) {
+    return false;
+  }
+
+  // Point VBA globals to our heap-allocated buffers
   pix = pix_buffer_;
   vram = vram_buffer_;
   workRAM = workRAM_buffer_;
@@ -109,10 +143,6 @@ bool VbaAdapter::loadRom(drivers::StorageSd& storage, const String& rom_path) {
   }
 
   // Allocate ROM buffer dynamically based on actual ROM size
-  // Round up to next power of 2 for VBA compatibility
-  uint32_t needed_size = 32 * 1024 * 1024;  // Max GBA ROM size
-  // But we can't allocate 32MB on ESP32-S3, so use the actual size
-  // VBA needs the ROM buffer to be at least rom_size bytes
   uint32_t rom_size = static_cast<uint32_t>(rom_data.size());
   // Round up to nearest 2-byte boundary
   if (rom_size % 2 != 0) rom_size++;
