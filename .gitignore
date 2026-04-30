@@ -3,3 +3,4 @@
 .pio/package/
 .DS_Store
 .claude/
+.venv

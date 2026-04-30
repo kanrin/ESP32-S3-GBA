@@ -89,4 +89,29 @@ void DisplayILI9488::pushFrame160x144(const std::vector<uint16_t>& frame) {
   tft_.endWrite();
 }
 
+void DisplayILI9488::pushFrame240x160(const std::vector<uint16_t>& frame) {
+  if (!ready_ || frame.size() != 240 * 160) {
+    return;
+  }
+
+  // Full-screen rendering: 240x160 -> 480x320
+  // Scale 2x horizontally (240*2 = 480), 2x vertically (160*2 = 320)
+  static std::vector<uint16_t> scaled(480 * 320);
+  for (int y = 0; y < 160; ++y) {
+    for (int x = 0; x < 240; ++x) {
+      const uint16_t px = frame[(y * 240) + x];
+      const int dstIndex = (y * 2 * 480) + (x * 2);
+      scaled[dstIndex] = px;
+      scaled[dstIndex + 1] = px;
+      scaled[dstIndex + 480] = px;
+      scaled[dstIndex + 481] = px;
+    }
+  }
+
+  tft_.startWrite();
+  tft_.setAddrWindow(0, 0, 480, 320);
+  tft_.pushColors(reinterpret_cast<uint16_t*>(scaled.data()), static_cast<int32_t>(scaled.size()), true);
+  tft_.endWrite();
+}
+
 }  // namespace drivers

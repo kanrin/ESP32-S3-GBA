@@ -1117,7 +1117,7 @@ static INLINE u8 CPUReadByte(u32 address)
          	return eepromRead();
 		case 14:
 		case 15:
-#ifdef USE_MOTION_SENSOR
+#if USE_MOTION_SENSOR
 		if(hardware.sensor)
         {
 			switch(address & 0x00008f00)
@@ -9078,38 +9078,18 @@ static int utilGetSize(int size)
 
    return res;
 }
-#if 0
+// utilLoad is referenced by CPUInit when useBiosFile=true.
+// Since we always call CPUInit(nullptr, false), this function is never called,
+// but we need to provide a stub to satisfy the linker.
 static uint8_t *utilLoad(const char *file,
       bool (*accept)(const char *), uint8_t *data, int &size)
 {
-   uint8_t *image  = NULL;
-   RFILE *fp       = filestream_open(file, RETRO_VFS_FILE_ACCESS_READ,
-         RETRO_VFS_FILE_ACCESS_HINT_NONE);
-   if (!fp)
-      return NULL;
-
-   filestream_seek(fp, 0, SEEK_END); /*go to end*/
-   size = filestream_tell(fp); /* get position at end (length)*/
-   filestream_rewind(fp);
-
-   image = data;
-
-   if(!image)
-   {
-      /*allocate buffer memory if none was passed to the function*/
-      if (!(image = (uint8_t *)malloc(utilGetSize(size))))
-      {
-         systemMessage("Failed to allocate memory for data");
-         filestream_close(fp);
-         return NULL;
-      }
-   }
-
-   filestream_read(fp, image, size); /* read into buffer*/
-   filestream_close(fp);
-   return image;
+   (void)file;
+   (void)accept;
+   (void)data;
+   (void)size;
+   return NULL;
 }
-#endif
 
 #ifdef LOAD_FROM_MEMORY
 int CPULoadRomData(const char *data, int size)
@@ -12479,6 +12459,10 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 	}
 }
+
+// Forward declaration for utilLoad (defined inside #if 0 block, but referenced by CPUInit)
+static uint8_t *utilLoad(const char *file,
+      bool (*accept)(const char *), uint8_t *data, int &size);
 
 void CPUInit(const char *biosFileName, bool useBiosFile)
 {

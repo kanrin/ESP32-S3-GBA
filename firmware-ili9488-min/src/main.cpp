@@ -6,6 +6,7 @@
 #include "drivers/display_ili9488.h"
 #include "drivers/input_keys.h"
 #include "drivers/storage_sd.h"
+#include "emulator/gbc_adapter.h"
 #include "emulator/vba_adapter.h"
 
 
@@ -17,12 +18,20 @@ drivers::StorageSd g_storage;
 drivers::AudioPwm g_audio_pwm;
 drivers::AudioI2sPcm5102 g_audio_i2s;
 app::RomMenu g_menu;
-emulator::VbaAdapter g_gbc;
+emulator::GbcAdapter g_gbc;
+emulator::VbaAdapter g_vba;
 
 
 bool g_rom_loaded = false;
 bool g_use_i2s_audio = false;
+bool g_use_vba = false;  // true if using VBA for GBA ROMs
 uint32_t g_last_ui_update_ms = 0;
+
+bool hasGbaExtension(const String& path) {
+  String lower = path;
+  lower.toLowerCase();
+  return lower.endsWith(".gba");
+}
 
 void drawStatus(const String& text) {
   g_display.fillScreen(TFT_WHITE);
@@ -58,6 +67,7 @@ void setup() {
   }
 
   g_gbc.begin(&g_display, &g_audio_pwm);
+  g_vba.begin(&g_display, &g_audio_pwm);
   Serial.println("init ok");
 }
 
@@ -66,10 +76,18 @@ void loop() {
   g_menu.update(input);
 
   if (!g_rom_loaded && g_menu.confirmedSelection()) {
-    g_rom_loaded = g_gbc.loadRom(g_storage, g_menu.selectedPath());
+    const String& path = g_menu.selectedPath();
+    g_use_vba = hasGbaExtension(path);
+
+    if (g_use_vba) {
+      g_rom_loaded = g_vba.loadRom(g_storage, path);
+    } else {
+      g_rom_loaded = g_gbc.loadRom(g_storage, path);
+    }
+
     if (g_rom_loaded) {
-      Serial.println("ROM loaded");
-      g_display.showSplash("ROM loaded");
+      Serial.println(g_use_vba ? "GBA ROM loaded (VBA)" : "ROM loaded");
+      g_display.showSplash(g_use_vba ? "GBA ROM loaded" : "ROM loaded");
       delay(250);
     } else {
       Serial.println("ROM load failed");
@@ -79,11 +97,16 @@ void loop() {
   }
 
   if (g_rom_loaded) {
-    g_gbc.setPwmFeedbackEnabled(!g_use_i2s_audio);
-    if (input.a && g_use_i2s_audio) {
-      g_audio_i2s.playTestTone(880, 24);
+    if (g_use_vba) {
+      g_vba.setPwmFeedbackEnabled(!g_use_i2s_audio);
+      g_vba.stepFrame(input);
+    } else {
+      g_gbc.setPwmFeedbackEnabled(!g_use_i2s_audio);
+      if (input.a && g_use_i2s_audio) {
+        g_audio_i2s.playTestTone(880, 24);
+      }
+      g_gbc.stepFrame(input);
     }
-    g_gbc.stepFrame(input);
   } else {
     const uint32_t now = millis();
     if (now - g_last_ui_update_ms > 120) {

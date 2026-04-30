@@ -9,7 +9,7 @@ namespace {
 
 bool hasRomExtension(const String& name) {
   const String lower = name;
-  return lower.endsWith(".gb") || lower.endsWith(".gbc") || lower.endsWith(".zip");
+  return lower.endsWith(".gba") || lower.endsWith(".gb") || lower.endsWith(".gbc") || lower.endsWith(".zip");
 }
 
 }  // namespace

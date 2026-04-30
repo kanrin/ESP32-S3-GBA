@@ -36,6 +36,9 @@ class VbaAdapter {
   bool isLoaded() const { return loaded_; }
   String statusText() const;
 
+  // Called by VBA core via systemDrawScreen() callback
+  void onFrameReady();
+
  private:
   drivers::DisplayILI9488* display_ = nullptr;
   drivers::AudioPwm* audio_ = nullptr;
@@ -47,7 +50,9 @@ class VbaAdapter {
   // VBA state buffers (static allocation for embedded)
   // Note: internalRAM, oam, ioMem, paletteRAM are static arrays in gba.cpp
   uint16_t pix_buffer_[256 * 160];  // VBA pix buffer (256 wide, 160 tall)
-  uint8_t rom_buffer_[32 * 1024 * 1024];  // 32MB ROM buffer
+  // ROM buffer is dynamically allocated based on actual ROM size
+  uint8_t* rom_buffer_ = nullptr;
+  uint32_t rom_buffer_size_ = 0;
   uint8_t vram_buffer_[0x20000];
   uint8_t workRAM_buffer_[0x40000];
   uint8_t bios_buffer_[0x4000];

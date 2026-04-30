@@ -1,5 +1,10 @@
 #include "emulator/vba_adapter.h"
 
+// Arduino's binary.h defines B0/B1 as macros which conflict with VBA's gba.h
+// Undefine them before including VBA headers
+#undef B0
+#undef B1
+
 // VBA core headers
 #include "emulator/vba/gba.h"
 #include "emulator/vba/globals.h"
@@ -14,8 +19,8 @@
 // Pointer to the adapter instance so system callbacks can reach it
 static emulator::VbaAdapter* g_adapter_instance = nullptr;
 
-// Forward declare the system callback implementations
-extern "C" {
+// System callback implementations
+// These functions are declared in system.h with C++ linkage, so no extern "C" needed.
 
 void systemDrawScreen(void) {
   if (g_adapter_instance) {
@@ -43,8 +48,6 @@ void systemOnWriteDataToSoundBuffer(int16_t* finalWave, int length) {
   (void)length;
 }
 
-}  // extern "C"
-
 // ============================================================
 // VbaAdapter implementation
 // ============================================================
@@ -56,13 +59,17 @@ namespace emulator {
 
 VbaAdapter::VbaAdapter() {}
 
-
 VbaAdapter::~VbaAdapter() {
   if (initialized_) {
     CPUCleanUp();
     initialized_ = false;
   }
   g_adapter_instance = nullptr;
+  if (rom_buffer_ != nullptr) {
+    free(rom_buffer_);
+    rom_buffer_ = nullptr;
+    rom_buffer_size_ = 0;
+  }
 }
 
 bool VbaAdapter::begin(drivers::DisplayILI9488* display, drivers::AudioPwm* audio) {
@@ -77,12 +84,10 @@ bool VbaAdapter::begin(drivers::DisplayILI9488* display, drivers::AudioPwm* audi
   // Note: internalRAM, oam, ioMem, paletteRAM are static arrays in gba.cpp
   // and don't need to be set here.
   pix = pix_buffer_;
-  rom = rom_buffer_;
   vram = vram_buffer_;
   workRAM = workRAM_buffer_;
   bios = bios_buffer_;
   libretro_save_buf = save_buffer_;
-
 
   // Initialize VBA core
   CPUInit(nullptr, false);
@@ -103,8 +108,39 @@ bool VbaAdapter::loadRom(drivers::StorageSd& storage, const String& rom_path) {
     return false;
   }
 
+  // Allocate ROM buffer dynamically based on actual ROM size
+  // Round up to next power of 2 for VBA compatibility
+  uint32_t needed_size = 32 * 1024 * 1024;  // Max GBA ROM size
+  // But we can't allocate 32MB on ESP32-S3, so use the actual size
+  // VBA needs the ROM buffer to be at least rom_size bytes
+  uint32_t rom_size = static_cast<uint32_t>(rom_data.size());
+  // Round up to nearest 2-byte boundary
+  if (rom_size % 2 != 0) rom_size++;
+
+  // Free previous ROM buffer if any
+  if (rom_buffer_ != nullptr) {
+    free(rom_buffer_);
+    rom_buffer_ = nullptr;
+    rom_buffer_size_ = 0;
+  }
+
+  // Allocate just enough for the ROM data
+  rom_buffer_ = static_cast<uint8_t*>(malloc(rom_size));
+  if (rom_buffer_ == nullptr) {
+    loaded_ = false;
+    return false;
+  }
+  rom_buffer_size_ = rom_size;
+  memcpy(rom_buffer_, rom_data.data(), rom_data.size());
+  // Zero-fill any remaining bytes
+  if (rom_size > rom_data.size()) {
+    memset(rom_buffer_ + rom_data.size(), 0, rom_size - rom_data.size());
+  }
+
+  // Point VBA rom pointer to our buffer
+  rom = rom_buffer_;
+
   // Load ROM into VBA using CPULoadRomData (loads from memory)
-  // This works for .gba, .gb, .gbc files since it just copies raw data
   int result = CPULoadRomData(reinterpret_cast<const char*>(rom_data.data()),
                                static_cast<int>(rom_data.size()));
   if (result <= 0) {
@@ -114,10 +150,6 @@ bool VbaAdapter::loadRom(drivers::StorageSd& storage, const String& rom_path) {
 
   // Reset the emulator
   CPUReset();
-
-  // Set up memory mapping for GB/GBC compatibility
-  // The VBA core handles GB/GBC through the GBA's backward compatibility mode
-  // No special setup needed - the CPU will execute the ROM as-is
 
   loaded_ = true;
   frame_count_ = 0;
@@ -170,28 +202,21 @@ void VbaAdapter::onFrameReady() {
   // The GBA screen is 240x160 pixels, stored in a 256-wide buffer.
   // pix layout: PIX_BUFFER_SCREEN_WIDTH (256) pixels per line, 160 lines.
   // The visible area starts at offset 8 on each line (centered in 256).
-  //
-  // For GB/GBC games, the VBA core renders the 160x144 GB screen
-  // centered in the 240x160 GBA buffer at offset (40, 8).
-  // We extract the 160x144 GB screen area.
-  static std::vector<uint16_t> frame_160x144(160 * 144);
+  // Extract the 240x160 GBA screen area.
+  static std::vector<uint16_t> frame_240x160(240 * 160);
 
   constexpr int kPixWidth = 256;  // PIX_BUFFER_SCREEN_WIDTH
   constexpr int kGbaWidth = 240;
   constexpr int kGbaHeight = 160;
-  constexpr int kGbWidth = 160;
-  constexpr int kGbHeight = 144;
   constexpr int kXOffset = (kPixWidth - kGbaWidth) / 2;  // 8
-  constexpr int kGbXOffset = kXOffset + (kGbaWidth - kGbWidth) / 2;  // 8 + 40 = 48
-  constexpr int kGbYOffset = (kGbaHeight - kGbHeight) / 2;  // 8
 
-  for (int y = 0; y < kGbHeight; ++y) {
-    for (int x = 0; x < kGbWidth; ++x) {
-      frame_160x144[(y * kGbWidth) + x] = pix_buffer_[((y + kGbYOffset) * kPixWidth) + x + kGbXOffset];
+  for (int y = 0; y < kGbaHeight; ++y) {
+    for (int x = 0; x < kGbaWidth; ++x) {
+      frame_240x160[(y * kGbaWidth) + x] = pix_buffer_[(y * kPixWidth) + x + kXOffset];
     }
   }
 
-  display_->pushFrame160x144(frame_160x144);
+  display_->pushFrame240x160(frame_240x160);
 }
 
 
