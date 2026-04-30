@@ -32,6 +32,13 @@ bool DisplayILI9488::begin() {
   tft_.init();
   Serial.println("[Display] tft_.init() done");
 
+  // Override pixel format to 16-bit RGB565 for correct color on RGB666 TFT
+  // ILI9488 init sets 0x66 (18-bit) for SPI by default, but we send RGB565 data
+  tft_.startWrite();
+  tft_.writecommand(0x3A);  // Pixel Interface Format
+  tft_.writedata(0x55);     // 16-bit RGB565
+  tft_.endWrite();
+
   tft_.setRotation(1);  // Landscape: 480x320
   tft_.invertDisplay(0);
   tft_.setSwapBytes(true);
