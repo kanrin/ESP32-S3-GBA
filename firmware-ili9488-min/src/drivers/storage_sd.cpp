@@ -1,10 +1,11 @@
 #include "drivers/storage_sd.h"
 
 #include <cstring>
+#include <dirent.h>
 #include "esp_log.h"
 #include "driver/sdspi_host.h"
 #include "sdmmc_cmd.h"
-#include "vfs_fat.h"
+#include "esp_vfs_fat.h"
 
 #include "boards/pin_config.h"
 

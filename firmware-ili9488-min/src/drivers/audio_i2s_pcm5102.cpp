@@ -29,7 +29,7 @@ bool AudioI2sPcm5102::begin(uint32_t sample_rate_hz) {
   std_cfg.clk_cfg.mclk_multiple = I2S_MCLK_MULTIPLE_256;
   std_cfg.slot_cfg.slot_mode = I2S_SLOT_MODE_STEREO;
   std_cfg.slot_cfg.slot_mask = I2S_STD_SLOT_BOTH;
-  std_cfg.slot_cfg.bit_width = I2S_DATA_BIT_WIDTH_16BIT;
+  std_cfg.slot_cfg.data_bit_width = I2S_DATA_BIT_WIDTH_16BIT;
   std_cfg.slot_cfg.ws_width = I2S_DATA_BIT_WIDTH_16BIT;
   std_cfg.slot_cfg.ws_pol = false;
   std_cfg.slot_cfg.bit_shift = true;

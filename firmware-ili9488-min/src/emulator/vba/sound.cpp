@@ -1980,8 +1980,10 @@ static void apply_muting (void)
 
 static void remake_stereo_buffer (void)
 {
-	if ( !ioMem )
-		return;
+	// ioMem is a fixed-size array, its address is never NULL.
+	// This check is kept for compatibility but always passes.
+	// if ( !ioMem )
+	// 	return;
 
 	// Clears pointers kept to old stereo_buffer
 	gba_pcm_init();

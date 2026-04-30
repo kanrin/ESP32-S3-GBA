@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "esp_log.h"
+#include "esp_timer.h"
 
 // VBA core headers
 #include "emulator/vba/gba.h"

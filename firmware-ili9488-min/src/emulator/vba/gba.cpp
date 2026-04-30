@@ -8994,9 +8994,10 @@ bool CPUSetupBuffers(void)
 	memset(pix, 1, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
 	memset(ioMem, 1, 0x400);
 
+	// internalRAM, paletteRAM, oam, ioMem are fixed-size arrays - their addresses are never NULL.
+	// Only check heap-allocated pointers.
 	if(rom == NULL || workRAM == NULL || bios == NULL ||
-	   internalRAM == NULL || paletteRAM == NULL ||
-	   vram == NULL || oam == NULL || pix == NULL || ioMem == NULL) {
+	   vram == NULL || pix == NULL) {
 		CPUCleanUp();
 		return false;
 	}
@@ -14871,7 +14872,7 @@ bool cheatsVerifyCheatCode(const char *code, const char *desc)
   char buffer[10];
   strncpy(buffer, code, 8);
   buffer[8] = 0;
-  sscanf(buffer, "%x", &address);
+  sscanf(buffer, "%x", (unsigned int *)&address);
 
   switch(address >> 24) {
   case 0x02:
@@ -14983,7 +14984,7 @@ void cheatsAddGSACode(const char *code, const char *desc, bool v3)
   strncpy(buffer, code, 8);
   buffer[8] = 0;
   u32 address;
-  sscanf(buffer, "%x", &address);
+  sscanf(buffer, "%x", (unsigned int *)&address);
   strncpy(buffer, &code[8], 8);
   buffer[8] = 0;
   u32 value;
@@ -15785,7 +15786,7 @@ void cheatsAddCBACode(const char *code, const char *desc)
   strncpy(buffer, code, 8);
   buffer[8] = 0;
   u32 address;
-  sscanf(buffer, "%x", &address);
+  sscanf(buffer, "%x", (unsigned int *)&address);
   strncpy(buffer, &code[9], 4);
   buffer[4] = 0;
   u32 value;
