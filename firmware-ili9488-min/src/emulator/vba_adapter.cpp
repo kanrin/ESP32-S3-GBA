@@ -79,21 +79,40 @@ bool VbaAdapter::allocateBuffers() {
   // Allocate all VBA buffers on the heap
   // Note: ESP32-S3-DevKitC-1-N8 has 320KB RAM, VBA needs ~616KB.
   // If PSRAM is available (e.g. N8R2 variant), these will use PSRAM automatically.
-  // Without PSRAM, allocation will fail gracefully and GBC-only mode will be used.
-  pix_buffer_ = (uint16_t*)calloc(256 * 160, sizeof(uint16_t));
-  vram_buffer_ = (uint8_t*)calloc(0x20000, 1);
-  workRAM_buffer_ = (uint8_t*)calloc(0x40000, 1);
-  bios_buffer_ = (uint8_t*)calloc(0x4000, 1);
-  save_buffer_ = (uint8_t*)calloc(0x22000, 1);
+  // Without PSRAM, try reduced buffer sizes to fit within ~200KB free SRAM.
 
-  if (!pix_buffer_ || !vram_buffer_ || !workRAM_buffer_ || !bios_buffer_ || !save_buffer_) {
-    LOG_E("VBA: Failed to allocate buffers (need ~616KB) - PSRAM may be needed");
-    freeBuffers();
-    return false;
+  // Step 1: try full-size allocation first
+  pix_buffer_ = (uint16_t*)calloc(256 * 160, sizeof(uint16_t));  // 82KB
+  vram_buffer_ = (uint8_t*)calloc(0x20000, 1);                    // 128KB
+  workRAM_buffer_ = (uint8_t*)calloc(0x40000, 1);                 // 256KB
+  bios_buffer_ = (uint8_t*)calloc(0x4000, 1);                     // 16KB
+  save_buffer_ = (uint8_t*)calloc(0x22000, 1);                    // 136KB
+
+  if (pix_buffer_ && vram_buffer_ && workRAM_buffer_ && bios_buffer_ && save_buffer_) {
+    LOG_I("VBA: Full-size buffers allocated successfully");
+    return true;
   }
 
-  LOG_I("VBA: All buffers allocated successfully");
-  return true;
+  // Step 2: full-size failed, free and try reduced sizes for N8 (no PSRAM)
+  LOG_W("VBA: Full-size alloc failed, trying reduced buffers for N8...");
+  freeBuffers();
+
+  // Reduced sizes to fit within ~200KB free SRAM on ESP32-S3-N8
+  pix_buffer_ = (uint16_t*)calloc(256 * 160, sizeof(uint16_t));  // 82KB (required)
+  vram_buffer_ = (uint8_t*)calloc(0x10000, 1);                    // 64KB (reduced from 128KB)
+  workRAM_buffer_ = (uint8_t*)calloc(0x8000, 1);                  // 32KB (reduced from 256KB)
+  bios_buffer_ = (uint8_t*)calloc(0x4000, 1);                     // 16KB (required)
+  save_buffer_ = (uint8_t*)calloc(0x4000, 1);                     // 16KB (reduced from 136KB)
+
+  if (pix_buffer_ && vram_buffer_ && workRAM_buffer_ && bios_buffer_ && save_buffer_) {
+    LOG_I("VBA: Reduced buffers allocated successfully (N8 mode)");
+    return true;
+  }
+
+  // Step 3: even reduced alloc failed
+  LOG_E("VBA: Failed to allocate buffers (need ~210KB) - not enough RAM");
+  freeBuffers();
+  return false;
 }
 
 void VbaAdapter::freeBuffers() {
