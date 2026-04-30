@@ -23,7 +23,7 @@ bool g_use_i2s_audio = false;
 uint32_t g_last_ui_update_ms = 0;
 
 void drawStatus(const String& text) {
-  g_display.fillScreen(TFT_BLACK);
+  g_display.fillScreen(TFT_WHITE);
   g_display.drawText(12, 12, "ESP32-S3 GBC MVP", TFT_WHITE, TFT_RED);
   g_display.drawText(12, 44, text, TFT_YELLOW, TFT_BLACK);
   g_display.drawText(12, 76, "A:load/run B:audio mode", TFT_CYAN, TFT_BLACK);
@@ -46,14 +46,17 @@ void setup() {
   g_audio_i2s.begin();
 
   if (!g_storage.begin()) {
+    Serial.println("SD init failed, check TF wiring.");
     drawStatus("SD init failed, check TF wiring.");
   } else {
     auto roms = g_storage.listRomFiles("/roms");
     g_menu.setEntries(roms);
+    Serial.println(g_menu.renderText());
     drawStatus(g_menu.renderText());
   }
 
   g_gbc.begin(&g_display, &g_audio_pwm);
+  Serial.println("init ok");
 }
 
 void loop() {
@@ -63,9 +66,11 @@ void loop() {
   if (!g_rom_loaded && g_menu.confirmedSelection()) {
     g_rom_loaded = g_gbc.loadRom(g_storage, g_menu.selectedPath());
     if (g_rom_loaded) {
+      Serial.println("ROM loaded");
       g_display.showSplash("ROM loaded");
       delay(250);
     } else {
+      Serial.println("ROM load failed");
       drawStatus("ROM load failed");
       delay(250);
     }
@@ -98,4 +103,5 @@ void loop() {
   last_b = input.b;
 
   delay(16);
+  // Serial.println("loop one");
 }
