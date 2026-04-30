@@ -7,12 +7,17 @@
 
 #include "drivers/logging.h"
 
+
+
 // VBA core headers
 #include "emulator/vba/gba.h"
 #include "emulator/vba/globals.h"
 #include "emulator/vba/memory.h"
 #include "emulator/vba/sound.h"
 #include "emulator/vba/system.h"
+
+
+
 
 // ============================================================
 // VBA system callbacks - these are called by the VBA core
@@ -71,7 +76,10 @@ VbaAdapter::~VbaAdapter() {
 }
 
 bool VbaAdapter::allocateBuffers() {
-  // Allocate all VBA buffers on the heap to avoid DRAM BSS overflow
+  // Allocate all VBA buffers on the heap
+  // Note: ESP32-S3-DevKitC-1-N8 has 320KB RAM, VBA needs ~616KB.
+  // If PSRAM is available (e.g. N8R2 variant), these will use PSRAM automatically.
+  // Without PSRAM, allocation will fail gracefully and GBC-only mode will be used.
   pix_buffer_ = (uint16_t*)calloc(256 * 160, sizeof(uint16_t));
   vram_buffer_ = (uint8_t*)calloc(0x20000, 1);
   workRAM_buffer_ = (uint8_t*)calloc(0x40000, 1);
@@ -79,11 +87,12 @@ bool VbaAdapter::allocateBuffers() {
   save_buffer_ = (uint8_t*)calloc(0x22000, 1);
 
   if (!pix_buffer_ || !vram_buffer_ || !workRAM_buffer_ || !bios_buffer_ || !save_buffer_) {
-    LOG_E("VBA: Failed to allocate buffers");
+    LOG_E("VBA: Failed to allocate buffers (need ~616KB) - PSRAM may be needed");
     freeBuffers();
     return false;
   }
 
+  LOG_I("VBA: All buffers allocated successfully");
   return true;
 }
 
@@ -104,6 +113,8 @@ void VbaAdapter::freeBuffers() {
     rom_buffer_size_ = 0;
   }
 }
+
+
 
 bool VbaAdapter::begin(drivers::DisplayILI9488* display, drivers::AudioPwm* audio) {
   display_ = display;

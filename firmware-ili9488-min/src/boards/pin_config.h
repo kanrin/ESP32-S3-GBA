@@ -12,7 +12,7 @@ constexpr int kCs = 10;
 constexpr int kDc = 9;
 constexpr int kRst = 14;
 constexpr int kBacklight = 21;
-constexpr bool kBacklightOnGpio = false;
+constexpr bool kBacklightOnGpio = true;
 }  // namespace display
 
 namespace storage {
