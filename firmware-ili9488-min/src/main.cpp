@@ -6,7 +6,8 @@
 #include "drivers/display_ili9488.h"
 #include "drivers/input_keys.h"
 #include "drivers/storage_sd.h"
-#include "emulator/gbc_adapter.h"
+#include "emulator/vba_adapter.h"
+
 
 namespace {
 
@@ -16,7 +17,8 @@ drivers::StorageSd g_storage;
 drivers::AudioPwm g_audio_pwm;
 drivers::AudioI2sPcm5102 g_audio_i2s;
 app::RomMenu g_menu;
-emulator::GbcAdapter g_gbc;
+emulator::VbaAdapter g_gbc;
+
 
 bool g_rom_loaded = false;
 bool g_use_i2s_audio = false;

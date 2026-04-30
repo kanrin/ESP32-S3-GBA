@@ -71,22 +71,20 @@ void DisplayILI9488::pushFrame160x144(const std::vector<uint16_t>& frame) {
     return;
   }
 
-  static std::vector<uint16_t> scaled(320 * 288);
-  for (int y = 0; y < 144; ++y) {
-    for (int x = 0; x < 160; ++x) {
-      const uint16_t px = frame[(y * 160) + x];
-      const int dstIndex = (y * 2 * 320) + (x * 2);
-      scaled[dstIndex] = px;
-      scaled[dstIndex + 1] = px;
-      scaled[dstIndex + 320] = px;
-      scaled[dstIndex + 321] = px;
+  // Full-screen rendering: 160x144 -> 480x320
+  // Scale 3x horizontally (160*3 = 480), ~2.222x vertically (144*2.222 = 320)
+  // Use nearest-neighbor interpolation for performance
+  static std::vector<uint16_t> scaled(480 * 320);
+  for (int dstY = 0; dstY < 320; ++dstY) {
+    const int srcY = (dstY * 144) / 320;
+    for (int dstX = 0; dstX < 480; ++dstX) {
+      const int srcX = (dstX * 160) / 480;
+      scaled[(dstY * 480) + dstX] = frame[(srcY * 160) + srcX];
     }
   }
 
-  const int xOffset = (480 - 320) / 2;
-  const int yOffset = (320 - 288) / 2;
   tft_.startWrite();
-  tft_.setAddrWindow(xOffset, yOffset, 320, 288);
+  tft_.setAddrWindow(0, 0, 480, 320);
   tft_.pushColors(reinterpret_cast<uint16_t*>(scaled.data()), static_cast<int32_t>(scaled.size()), true);
   tft_.endWrite();
 }
