@@ -1,6 +1,9 @@
 PIO = C:\Users\zhl11\.platformio\penv\Scripts\platformio.exe
 PORT = com3
 
+pull:
+	git $@
+
 upload:
 	$(PIO) run -t upload --upload-port $(PORT)
 
@@ -13,4 +16,4 @@ list:
 run:
 	$(PIO) run
 
-all: list run upload monitor
+all: pull list run upload monitor
