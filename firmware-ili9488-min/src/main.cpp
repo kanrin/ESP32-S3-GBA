@@ -5,6 +5,7 @@
 #include "drivers/audio_pwm.h"
 #include "drivers/display_ili9488.h"
 #include "drivers/input_keys.h"
+#include "drivers/logging.h"
 #include "drivers/storage_sd.h"
 #include "emulator/gbc_adapter.h"
 #include "emulator/vba_adapter.h"
@@ -47,7 +48,7 @@ void drawStatus(const String& text) {
 void setup() {
   Serial.begin(115200);
   delay(200);
-  Serial.println("Booting handheld MVP...");
+  LOG_I("Booting handheld MVP...");
 
   g_display.begin();
   g_display.showSplash("Bring-up");
@@ -57,18 +58,18 @@ void setup() {
   g_audio_i2s.begin();
 
   if (!g_storage.begin()) {
-    Serial.println("SD init failed, check TF wiring.");
+    LOG_E("SD init failed, check TF wiring.");
     drawStatus("SD init failed, check TF wiring.");
   } else {
     auto roms = g_storage.listRomFiles("/roms");
     g_menu.setEntries(roms);
-    Serial.println(g_menu.renderText());
+    LOG_I("ROM list:\r\n%s", g_menu.renderText().c_str());
     drawStatus(g_menu.renderText());
   }
 
   g_gbc.begin(&g_display, &g_audio_pwm);
   g_vba.begin(&g_display, &g_audio_pwm);
-  Serial.println("init ok");
+  LOG_I("init ok");
 }
 
 void loop() {
@@ -86,11 +87,11 @@ void loop() {
     }
 
     if (g_rom_loaded) {
-      Serial.println(g_use_vba ? "GBA ROM loaded (VBA)" : "ROM loaded");
+      LOG_I("%s", g_use_vba ? "GBA ROM loaded (VBA)" : "ROM loaded");
       g_display.showSplash(g_use_vba ? "GBA ROM loaded" : "ROM loaded");
       delay(250);
     } else {
-      Serial.println("ROM load failed");
+      LOG_E("ROM load failed");
       drawStatus("ROM load failed");
       delay(250);
     }
@@ -128,5 +129,4 @@ void loop() {
   last_b = input.b;
 
   delay(16);
-  // Serial.println("loop one");
 }

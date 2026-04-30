@@ -5,6 +5,8 @@
 #undef B0
 #undef B1
 
+#include "drivers/logging.h"
+
 // VBA core headers
 #include "emulator/vba/gba.h"
 #include "emulator/vba/globals.h"
@@ -77,7 +79,7 @@ bool VbaAdapter::allocateBuffers() {
   save_buffer_ = (uint8_t*)calloc(0x22000, 1);
 
   if (!pix_buffer_ || !vram_buffer_ || !workRAM_buffer_ || !bios_buffer_ || !save_buffer_) {
-    Serial.println("VBA: Failed to allocate buffers");
+    LOG_E("VBA: Failed to allocate buffers");
     freeBuffers();
     return false;
   }
