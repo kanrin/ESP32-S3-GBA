@@ -1,13 +1,9 @@
 #include "emulator/vba_adapter.h"
 
-// Arduino's binary.h defines B0/B1 as macros which conflict with VBA's gba.h
-// Undefine them before including VBA headers
-#undef B0
-#undef B1
+#include <cstdio>
+#include <cstring>
 
-#include "drivers/logging.h"
-
-
+#include "esp_log.h"
 
 // VBA core headers
 #include "emulator/vba/gba.h"
@@ -16,8 +12,7 @@
 #include "emulator/vba/sound.h"
 #include "emulator/vba/system.h"
 
-
-
+static const char* TAG = "VBA";
 
 // ============================================================
 // VBA system callbacks - these are called by the VBA core
@@ -41,7 +36,7 @@ bool systemReadJoypads(void) {
 }
 
 uint32_t systemGetClock(void) {
-  return micros();
+  return (uint32_t)(esp_timer_get_time());
 }
 
 void systemMessage(const char* msg, ...) {
@@ -89,12 +84,12 @@ bool VbaAdapter::allocateBuffers() {
   save_buffer_ = (uint8_t*)calloc(0x22000, 1);                    // 136KB
 
   if (pix_buffer_ && vram_buffer_ && workRAM_buffer_ && bios_buffer_ && save_buffer_) {
-    LOG_I("VBA: Full-size buffers allocated successfully");
+    ESP_LOGI(TAG, "Full-size buffers allocated successfully");
     return true;
   }
 
   // Step 2: full-size failed, free and try reduced sizes for N8 (no PSRAM)
-  LOG_W("VBA: Full-size alloc failed, trying reduced buffers for N8...");
+  ESP_LOGW(TAG, "Full-size alloc failed, trying reduced buffers for N8...");
   freeBuffers();
 
   // Reduced sizes to fit within ~200KB free SRAM on ESP32-S3-N8
@@ -105,12 +100,12 @@ bool VbaAdapter::allocateBuffers() {
   save_buffer_ = (uint8_t*)calloc(0x4000, 1);                     // 16KB (reduced from 136KB)
 
   if (pix_buffer_ && vram_buffer_ && workRAM_buffer_ && bios_buffer_ && save_buffer_) {
-    LOG_I("VBA: Reduced buffers allocated successfully (N8 mode)");
+    ESP_LOGI(TAG, "Reduced buffers allocated successfully (N8 mode)");
     return true;
   }
 
   // Step 3: even reduced alloc failed
-  LOG_E("VBA: Failed to allocate buffers (need ~210KB) - not enough RAM");
+  ESP_LOGE(TAG, "Failed to allocate buffers (need ~210KB) - not enough RAM");
   freeBuffers();
   return false;
 }
@@ -162,7 +157,7 @@ bool VbaAdapter::begin(drivers::DisplayILI9488* display, drivers::AudioPwm* audi
   return true;
 }
 
-bool VbaAdapter::loadRom(drivers::StorageSd& storage, const String& rom_path) {
+bool VbaAdapter::loadRom(drivers::StorageSd& storage, const std::string& rom_path) {
   if (!initialized_) {
     return false;
   }
@@ -282,11 +277,13 @@ void VbaAdapter::onFrameReady() {
 }
 
 
-String VbaAdapter::statusText() const {
+std::string VbaAdapter::statusText() const {
   if (!loaded_) {
     return "VBA: ROM not loaded";
   }
-  return "VBA: running frame=" + String(frame_count_);
+  char buf[64];
+  snprintf(buf, sizeof(buf), "VBA: running frame=%lu", frame_count_);
+  return std::string(buf);
 }
 
 }  // namespace emulator

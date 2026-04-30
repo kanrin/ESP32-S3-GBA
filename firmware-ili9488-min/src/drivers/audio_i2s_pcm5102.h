@@ -1,6 +1,9 @@
 #pragma once
 
-#include <Arduino.h>
+#include <stdint.h>
+#include <stddef.h>
+
+#include "driver/i2s_std.h"
 
 namespace drivers {
 
@@ -14,6 +17,7 @@ class AudioI2sPcm5102 {
  private:
   bool ready_ = false;
   uint32_t sample_rate_hz_ = 44100;
+  i2s_chan_handle_t tx_handle_ = nullptr;
 };
 
 }  // namespace drivers

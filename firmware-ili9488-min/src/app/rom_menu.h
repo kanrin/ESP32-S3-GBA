@@ -1,6 +1,7 @@
 #pragma once
 
-#include <Arduino.h>
+#include <stdint.h>
+#include <string>
 #include <vector>
 
 #include "drivers/input_keys.h"
@@ -9,15 +10,15 @@ namespace app {
 
 class RomMenu {
  public:
-  void setEntries(const std::vector<String>& entries);
+  void setEntries(const std::vector<std::string>& entries);
   bool update(const drivers::InputState& input);
   int selectedIndex() const { return selected_; }
   bool confirmedSelection() const { return confirm_pressed_; }
-  String selectedPath() const;
-  String renderText() const;
+  std::string selectedPath() const;
+  std::string renderText() const;
 
  private:
-  std::vector<String> entries_;
+  std::vector<std::string> entries_;
   int selected_ = 0;
   bool last_up_ = false;
   bool last_down_ = false;

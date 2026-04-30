@@ -9069,7 +9069,7 @@ static void CPULoadRomGeneric(uint8_t *whereToLoad)
 	}
 }
 
-static int utilGetSize(int size)
+static int __attribute__((unused)) utilGetSize(int size)
 {
    int res = 1;
 
@@ -14765,6 +14765,7 @@ void cheatsDelete(int number, bool restore)
         } else {
           CPUWriteMemory(cheatsList[x].address, cheatsList[x].oldValue);
         }
+        break;
       case GSA_16_BIT_ROM_PATCH:
         if(cheatsList[x].status & 1) {
           cheatsList[x].status &= ~1;
@@ -14893,7 +14894,7 @@ bool cheatsVerifyCheatCode(const char *code, const char *desc)
   }
 
   strncpy(buffer, &code[9], 8);
-  sscanf(buffer, "%x", &value);
+  sscanf(buffer, "%x", (unsigned int *)&value);
   int type = 0;
   if(len == 13)
     type = 114;
@@ -14986,7 +14987,7 @@ void cheatsAddGSACode(const char *code, const char *desc, bool v3)
   strncpy(buffer, &code[8], 8);
   buffer[8] = 0;
   u32 value;
-  sscanf(buffer, "%x", &value);
+  sscanf(buffer, "%x", (unsigned int *)&value);
   cheatsGSAChangeEncryption(cheatsGSAGetDeadface (v3), v3);
   cheatsDecryptGSACode(address, value, v3);
 
@@ -15788,7 +15789,7 @@ void cheatsAddCBACode(const char *code, const char *desc)
   strncpy(buffer, &code[9], 4);
   buffer[4] = 0;
   u32 value;
-  sscanf(buffer, "%x", &value);
+  sscanf(buffer, "%x", (unsigned int *)&value);
 
   u8 array[8] = {
     (u8)(address & 255),

@@ -1,6 +1,7 @@
 #pragma once
 
-#include <Arduino.h>
+#include <stdint.h>
+#include <string>
 #include <vector>
 
 #include "drivers/audio_pwm.h"
@@ -13,11 +14,11 @@ namespace emulator {
 class GbcAdapter {
  public:
   bool begin(drivers::DisplayILI9488* display, drivers::AudioPwm* audio);
-  bool loadRom(drivers::StorageSd& storage, const String& rom_path);
+  bool loadRom(drivers::StorageSd& storage, const std::string& rom_path);
   void setPwmFeedbackEnabled(bool enabled) { pwm_feedback_enabled_ = enabled; }
   void stepFrame(const drivers::InputState& input);
   bool isLoaded() const { return loaded_; }
-  String statusText() const;
+  std::string statusText() const;
 
  private:
   std::vector<uint8_t> rom_buffer_;

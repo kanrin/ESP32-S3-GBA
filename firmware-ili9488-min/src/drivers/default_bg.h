@@ -3,7 +3,7 @@
 // Regenerate with: python tools/gen_default_bg.py
 #pragma once
 
-#include <Arduino.h>
+#include <stdint.h>
 
 namespace drivers {
 

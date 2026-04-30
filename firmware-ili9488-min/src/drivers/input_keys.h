@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Arduino.h>
+#include <stdint.h>
 
 namespace drivers {
 
@@ -26,7 +26,6 @@ class InputKeys {
 
  private:
   bool readActiveLow(int pin) const;
-  bool readDebounced(int pin, uint8_t slot);
 
   static constexpr uint16_t kDebounceMs = 15;
   bool stable_state_[12] = {false};

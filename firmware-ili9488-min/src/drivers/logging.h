@@ -1,9 +1,9 @@
 #pragma once
 
-#include <Arduino.h>
+#include "esp_log.h"
 
 // ============================================================
-// Arduino-style logging macros
+// ESP-IDF style logging macros
 // Usage:
 //   LOG_I("System initialized");
 //   LOG_W("Low memory: %d bytes free", freeHeap);
@@ -26,23 +26,21 @@
 #define LOG_LEVEL_DEBUG 3
 #define LOG_LEVEL_VERBOSE 4
 
-// Note: ESP32 Arduino framework already defines __FILENAME__ in assert.h
-// We use a different name to avoid redefinition warnings
-#ifndef SRC_FILE
-#define SRC_FILE (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-#endif
+// Note: ESP-IDF's ESP_LOGx macros already include file/line info via TAG
+// We use a custom tag for our application
+#define APP_TAG "GBA"
 
 #if LOG_ENABLED
 
 // Error level (always printed if LOG_ENABLED)
 #define LOG_E(fmt, ...) do { \
-  Serial.printf("[E][%s:%d] " fmt "\r\n", SRC_FILE, __LINE__, ##__VA_ARGS__); \
+  ESP_LOGE(APP_TAG, fmt, ##__VA_ARGS__); \
 } while(0)
 
 // Warn level
 #if LOG_LEVEL >= LOG_LEVEL_WARN
 #define LOG_W(fmt, ...) do { \
-  Serial.printf("[W][%s:%d] " fmt "\r\n", SRC_FILE, __LINE__, ##__VA_ARGS__); \
+  ESP_LOGW(APP_TAG, fmt, ##__VA_ARGS__); \
 } while(0)
 #else
 #define LOG_W(fmt, ...) do {} while(0)
@@ -51,7 +49,7 @@
 // Info level
 #if LOG_LEVEL >= LOG_LEVEL_INFO
 #define LOG_I(fmt, ...) do { \
-  Serial.printf("[I][%s:%d] " fmt "\r\n", SRC_FILE, __LINE__, ##__VA_ARGS__); \
+  ESP_LOGI(APP_TAG, fmt, ##__VA_ARGS__); \
 } while(0)
 #else
 #define LOG_I(fmt, ...) do {} while(0)
@@ -60,7 +58,7 @@
 // Debug level
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
 #define LOG_D(fmt, ...) do { \
-  Serial.printf("[D][%s:%d] " fmt "\r\n", SRC_FILE, __LINE__, ##__VA_ARGS__); \
+  ESP_LOGD(APP_TAG, fmt, ##__VA_ARGS__); \
 } while(0)
 #else
 #define LOG_D(fmt, ...) do {} while(0)
@@ -69,7 +67,7 @@
 // Verbose level
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE
 #define LOG_V(fmt, ...) do { \
-  Serial.printf("[V][%s:%d] " fmt "\r\n", SRC_FILE, __LINE__, ##__VA_ARGS__); \
+  ESP_LOGV(APP_TAG, fmt, ##__VA_ARGS__); \
 } while(0)
 #else
 #define LOG_V(fmt, ...) do {} while(0)

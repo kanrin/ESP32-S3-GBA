@@ -2,7 +2,7 @@
 
 namespace app {
 
-void RomMenu::setEntries(const std::vector<String>& entries) {
+void RomMenu::setEntries(const std::vector<std::string>& entries) {
   entries_ = entries;
   selected_ = 0;
   confirm_pressed_ = false;
@@ -30,14 +30,14 @@ bool RomMenu::update(const drivers::InputState& input) {
   return true;
 }
 
-String RomMenu::selectedPath() const {
+std::string RomMenu::selectedPath() const {
   if (entries_.empty()) {
     return "";
   }
   return entries_[selected_];
 }
 
-String RomMenu::renderText() const {
+std::string RomMenu::renderText() const {
   if (entries_.empty()) {
     return "ROM: <none>";
   }

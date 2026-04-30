@@ -1,60 +1,61 @@
 #include "drivers/input_keys.h"
 
+#include "esp_log.h"
+#include "driver/gpio.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 #include "boards/pin_config.h"
+
+static const char* TAG = "InputKeys";
 
 namespace drivers {
 
 void InputKeys::begin() {
-  pinMode(board::input::kUp, INPUT_PULLUP);
-  pinMode(board::input::kDown, INPUT_PULLUP);
-  pinMode(board::input::kLeft, INPUT_PULLUP);
-  pinMode(board::input::kRight, INPUT_PULLUP);
+  ESP_LOGI(TAG, "begin()");
 
-  pinMode(board::input::kA, INPUT_PULLUP);
-  pinMode(board::input::kB, INPUT_PULLUP);
-  pinMode(board::input::kX, INPUT_PULLUP);
-  pinMode(board::input::kY, INPUT_PULLUP);
+  // Configure all input pins as inputs with pull-up
+  // ESP32-S3 has internal pull-ups that can be enabled
+  const int input_pins[] = {
+      board::input::kUp, board::input::kDown, board::input::kLeft, board::input::kRight,
+      board::input::kA, board::input::kB, board::input::kX, board::input::kY,
+      board::input::kStart, board::input::kSelect, board::input::kL, board::input::kR};
 
-  pinMode(board::input::kStart, INPUT_PULLUP);
-  pinMode(board::input::kSelect, INPUT_PULLUP);
-  pinMode(board::input::kL, INPUT_PULLUP);
-  pinMode(board::input::kR, INPUT_PULLUP);
+  gpio_config_t io_conf = {};
+  io_conf.intr_type = GPIO_INTR_DISABLE;
+  io_conf.mode = GPIO_MODE_INPUT;
+  io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
+  io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+
+  uint64_t pin_mask = 0;
+  for (int pin : input_pins) {
+    pin_mask |= (1ULL << pin);
+  }
+  io_conf.pin_bit_mask = pin_mask;
+  gpio_config(&io_conf);
 }
 
 InputState InputKeys::poll() {
   InputState state;
-  state.up = readDebounced(board::input::kUp, 0);
-  state.down = readDebounced(board::input::kDown, 1);
-  state.left = readDebounced(board::input::kLeft, 2);
-  state.right = readDebounced(board::input::kRight, 3);
+  state.up = readActiveLow(board::input::kUp);
+  state.down = readActiveLow(board::input::kDown);
+  state.left = readActiveLow(board::input::kLeft);
+  state.right = readActiveLow(board::input::kRight);
 
-  state.a = readDebounced(board::input::kA, 4);
-  state.b = readDebounced(board::input::kB, 5);
-  state.x = readDebounced(board::input::kX, 6);
-  state.y = readDebounced(board::input::kY, 7);
+  state.a = readActiveLow(board::input::kA);
+  state.b = readActiveLow(board::input::kB);
+  state.x = readActiveLow(board::input::kX);
+  state.y = readActiveLow(board::input::kY);
 
-  state.start = readDebounced(board::input::kStart, 8);
-  state.select = readDebounced(board::input::kSelect, 9);
-  state.l = readDebounced(board::input::kL, 10);
-  state.r = readDebounced(board::input::kR, 11);
+  state.start = readActiveLow(board::input::kStart);
+  state.select = readActiveLow(board::input::kSelect);
+  state.l = readActiveLow(board::input::kL);
+  state.r = readActiveLow(board::input::kR);
   return state;
 }
 
 bool InputKeys::readActiveLow(int pin) const {
-  return digitalRead(pin) == LOW;
-}
-
-bool InputKeys::readDebounced(int pin, uint8_t slot) {
-  const bool raw = readActiveLow(pin);
-  const uint32_t now = millis();
-  if (raw != sampled_state_[slot]) {
-    sampled_state_[slot] = raw;
-    sampled_at_ms_[slot] = now;
-  }
-  if ((now - sampled_at_ms_[slot]) >= kDebounceMs) {
-    stable_state_[slot] = sampled_state_[slot];
-  }
-  return stable_state_[slot];
+  return gpio_get_level(static_cast<gpio_num_t>(pin)) == 0;
 }
 
 }  // namespace drivers

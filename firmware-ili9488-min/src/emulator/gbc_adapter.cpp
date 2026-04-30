@@ -1,5 +1,7 @@
 #include "emulator/gbc_adapter.h"
 
+#include <cstdio>
+
 namespace {
 
 uint16_t gbPalette(uint8_t value) {
@@ -26,7 +28,7 @@ bool GbcAdapter::begin(drivers::DisplayILI9488* display, drivers::AudioPwm* audi
   return display_ != nullptr && audio_ != nullptr;
 }
 
-bool GbcAdapter::loadRom(drivers::StorageSd& storage, const String& rom_path) {
+bool GbcAdapter::loadRom(drivers::StorageSd& storage, const std::string& rom_path) {
   rom_buffer_.clear();
   loaded_ = storage.readFile(rom_path, &rom_buffer_) && !rom_buffer_.empty();
   frame_tick_ = 0;
@@ -55,11 +57,13 @@ void GbcAdapter::stepFrame(const drivers::InputState& input) {
   ++frame_tick_;
 }
 
-String GbcAdapter::statusText() const {
+std::string GbcAdapter::statusText() const {
   if (!loaded_) {
     return "GBC: ROM not loaded";
   }
-  return "GBC: running frame=" + String(frame_tick_);
+  char buf[64];
+  snprintf(buf, sizeof(buf), "GBC: running frame=%lu", frame_tick_);
+  return std::string(buf);
 }
 
 }  // namespace emulator
